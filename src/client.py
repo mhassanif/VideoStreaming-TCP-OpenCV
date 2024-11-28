@@ -5,6 +5,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk  # For image handling
 
 selected_video = None  # Variable to keep track of the selected video
+selected_title_label = None  # Variable to keep track of the selected title label
 
 def receive_metadata(client_socket):
     """Receive video metadata from the server and return it as a list of videos."""
@@ -17,13 +18,22 @@ def receive_metadata(client_socket):
     ##########################
     return videos
 
-def select_video(video_title):
-    """Select a video from the list."""
-    global selected_video
+def select_video(video_title, title_label):
+    """Select a video from the list and highlight its title."""
+    global selected_video, selected_title_label
+
+    # Reset previous selected title label's color
+    if selected_title_label:
+        selected_title_label.config(foreground="black")  # Reset text color to black
+
+    # Set the new selected video and highlight its title
     selected_video = video_title
+    selected_title_label = title_label
+    selected_title_label.config(foreground="blue")  # Set text color to blue for highlight
+
     print(f"Selected video: {selected_video}")
 
-def send_control_signal(client_socket, video_title):
+def request_video(client_socket, video_title):
     """Send control signal to the server to play the selected video."""
     control_signal = {"action": "play", "video": video_title}
     control_signal_json = json.dumps(control_signal)
@@ -75,10 +85,10 @@ def display_ui(videos, client_socket):
         title_label.grid(row=0, column=1, padx=5)
 
         # Make the thumbnail clickable
-        thumbnail_label.bind("<Button-1>", lambda e, video_title=video['title']: select_video(video_title))
+        thumbnail_label.bind("<Button-1>", lambda e, video_title=video['title'], title_label=title_label: select_video(video_title, title_label))
 
     # Create the 'Play' button at the bottom
-    play_button = ttk.Button(window, text="Play", command=lambda: send_control_signal(client_socket, selected_video))
+    play_button = ttk.Button(window, text="Play", command=lambda: request_video(client_socket, selected_video))
     play_button.grid(row=1, column=0, columnspan=2, pady=10)
 
     # Run the UI

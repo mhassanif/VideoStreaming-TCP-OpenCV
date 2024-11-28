@@ -9,7 +9,7 @@ THUMBNAIL_DIR = os.path.join(os.path.dirname(__file__), "../thumbnails")
 METADATA_FILE = os.path.join(VIDEO_DIR, "metadata.json")
 
 
-# helper function 
+# Helper function
 def create_thumbnail(video_path, thumbnail_path):
     """Generate a thumbnail for the given video."""
     cap = cv2.VideoCapture(video_path)
@@ -41,7 +41,6 @@ def generate_video_thumbnails():
             print(f"Thumbnail already exists: {thumbnail_path}")
 
 
-
 def generate_metadata():
     """Generate video metadata (title and thumbnail paths) and store it in a JSON file."""
     # List all videos in the directory
@@ -68,7 +67,7 @@ def generate_metadata():
     print(f"Metadata saved to {METADATA_FILE}")
 
 
-# return json string from file
+# Return json string from file
 def read_metadata():
     """Read video metadata from the stored JSON file."""
     if os.path.exists(METADATA_FILE):
@@ -81,7 +80,7 @@ def read_metadata():
         return read_metadata()  # Recursively call after generating metadata
 
 
-# used by main to send when client connects
+# Used by main to send when client connects
 def send_metadata(client_socket):
     """Send video metadata as JSON to the client."""
     # Get the metadata (either from the JSON or generated)
@@ -91,7 +90,17 @@ def send_metadata(client_socket):
     metadata_json = json.dumps(metadata)
     client_socket.sendall(metadata_json.encode('utf-8'))  # Send JSON over TCP
     print("Metadata sent to client!")
-    # print(f"Metadata sent to client: {metadata_json}")
+
+
+def receive_control_signal(client_socket):
+    """Receive control signal (message) from the client and display it."""
+    # Receive the message from the client
+    data = client_socket.recv(1024).decode('utf-8')  # Adjust the buffer size as needed
+    if data:
+        control_signal = json.loads(data)  # Parse the JSON control signal
+        print(f"Received control signal from client: {control_signal}")
+    else:
+        print("No data received from client.")
 
 
 def start_server():
@@ -100,16 +109,21 @@ def start_server():
     server_socket.bind(('0.0.0.0', 5000))
     server_socket.listen(5)
     print("Server listening on port 5000...")
+    
     while True:
         client_socket, addr = server_socket.accept()
         print(f"Connected to {addr}")
         
         # Send metadata to the client
         send_metadata(client_socket)
+
+        # Receive control signal (e.g., play video command)
+        receive_control_signal(client_socket)
         
+        # Close the client connection
         client_socket.close()
 
 
 if __name__ == "__main__":
-    # generate_video_thumbnails()
-    start_server()  
+    # generate_video_thumbnails()  # Uncomment to generate thumbnails if needed
+    start_server()
