@@ -10,7 +10,9 @@ def receive_metadata(client_socket):
     videos = json.loads(data)
     print("Available Videos:")
     for video in videos:
-        print(f"- {video['title']}")
+        # print(f"- {video['title']}")
+        print(f"- {video['title']} (Thumbnail Path: {video['thumbnail']})")
+
 
 def connect_to_server():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
