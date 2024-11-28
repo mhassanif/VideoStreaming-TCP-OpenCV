@@ -21,9 +21,9 @@ def display_ui(videos):
     """Display a minimal GUI with a scrollable list of video thumbnails and titles."""
     # Create the main window
     window = tk.Tk()
-    window.title("Video Thumbnails")
+    window.title("Youtube")
 
-    # Create a canvas and a scrollbar for scrollable frame
+    # # Create a canvas and a scrollbar for scrollable frame
     canvas = tk.Canvas(window)
     scrollbar = ttk.Scrollbar(window, orient="vertical", command=canvas.yview)
     scrollable_frame = ttk.Frame(canvas)
@@ -33,15 +33,15 @@ def display_ui(videos):
         lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
     )
 
-    # Create a window in the canvas for the scrollable frame
+    # # Create a window in the canvas for the scrollable frame
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(yscrollcommand=scrollbar.set)
 
-    # Place canvas and scrollbar in the window
+    # # Place canvas and scrollbar in the window
     canvas.grid(row=0, column=0, sticky="nsew")
     scrollbar.grid(row=0, column=1, sticky="ns")
 
-    # Display videos in the scrollable frame
+    # # Display videos in the scrollable frame
     for video in videos:
         # Create a frame for each video
         video_frame = ttk.Frame(scrollable_frame)
@@ -50,7 +50,8 @@ def display_ui(videos):
         # Display the thumbnail image
         thumbnail_path = video['thumbnail']
         img = Image.open(thumbnail_path)
-        img = img.resize((100, 100), Image.ANTIALIAS)  # Resize to fit the UI
+        img = img.resize((100, 100), Image.Resampling.LANCZOS)  # Resize to fit the UI
+
         img = ImageTk.PhotoImage(img)
 
         thumbnail_label = ttk.Label(video_frame, image=img)
@@ -73,7 +74,7 @@ def connect_to_server():
     videos = receive_metadata(client_socket)
     
     # Display the UI with the metadata
-    # display_ui(videos)
+    display_ui(videos)
 
     client_socket.close()
 
