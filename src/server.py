@@ -78,7 +78,6 @@ def read_metadata():
         generate_metadata()
         return read_metadata()  # Recursively call after generating metadata
 
-
 def send_metadata(client_socket):
     """Send video metadata as JSON to the client."""
     # Get the metadata (either from the JSON or generated)
@@ -88,7 +87,6 @@ def send_metadata(client_socket):
     metadata_json = json.dumps(metadata)
     client_socket.sendall(metadata_json.encode('utf-8'))  # Send JSON over TCP
     print("Metadata sent to client!")
-
 
 def receive_control_signal(client_socket):
     """Receive control signals from the client continuously."""
