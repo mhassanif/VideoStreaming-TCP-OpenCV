@@ -33,9 +33,14 @@ def select_video(video_title, title_label):
 
     print(f"Selected video: {selected_video}")
 
-def request_video(client_socket, video_title):
-    """Send control signal to the server to play the selected video."""
-    control_signal = {"action": "play", "video": video_title}
+
+def send_control_signal(client_socket, action, video_title):
+    # Construct the control signal with action and video title
+    control_signal = {
+        "action": action,
+        "video": video_title  # Always include the video title
+    }
+    # Convert the control signal to JSON and send it to the server
     control_signal_json = json.dumps(control_signal)
     client_socket.sendall(control_signal_json.encode('utf-8'))
     print(f"Sent control signal: {control_signal_json}")
@@ -87,8 +92,9 @@ def display_ui(videos, client_socket):
         # Make the thumbnail clickable
         thumbnail_label.bind("<Button-1>", lambda e, video_title=video['title'], title_label=title_label: select_video(video_title, title_label))
 
+
     # Create the 'Play' button at the bottom
-    play_button = ttk.Button(window, text="Play", command=lambda: request_video(client_socket, selected_video))
+    play_button = ttk.Button(window, text="Play", command=lambda: send_control_signal(client_socket, "start", selected_video))
     play_button.grid(row=1, column=0, columnspan=2, pady=10)
 
     # Run the UI

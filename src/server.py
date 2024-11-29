@@ -67,7 +67,6 @@ def generate_metadata():
     print(f"Metadata saved to {METADATA_FILE}")
 
 
-# Return json string from file
 def read_metadata():
     """Read video metadata from the stored JSON file."""
     if os.path.exists(METADATA_FILE):
@@ -80,7 +79,6 @@ def read_metadata():
         return read_metadata()  # Recursively call after generating metadata
 
 
-# Used by main to send when client connects
 def send_metadata(client_socket):
     """Send video metadata as JSON to the client."""
     # Get the metadata (either from the JSON or generated)
@@ -93,18 +91,36 @@ def send_metadata(client_socket):
 
 
 def receive_control_signal(client_socket):
-    """Receive control signal (message) from the client and display it."""
-    # Receive the message from the client
-    data = client_socket.recv(1024).decode('utf-8')  # Adjust the buffer size as needed
-    if data:
-        control_signal = json.loads(data)  # Parse the JSON control signal
-        print(f"Received control signal from client: {control_signal}")
-    else:
-        print("No data received from client.")
+    """Receive control signals from the client continuously."""
+    try:
+        while True:  # Keep listening for client messages
+            data = client_socket.recv(1024).decode('utf-8')  # Adjust buffer size as needed
+            if not data:
+                print("Client disconnected.")
+                break
+
+            # Parse and handle the received control signal
+            control_signal = json.loads(data)
+            print(f"Received control signal: {control_signal}")
+
+            # Handle different actions
+            action = control_signal.get("action")
+            video_title = control_signal.get("video")
+            if action == "start":
+                print(f"Starting video: {video_title}")
+            elif action == "pause":
+                print(f"Pausing video: {video_title}")
+            elif action == "stop":
+                print("Stopping video playback.")
+            else:
+                print(f"Unknown action: {action}")
+
+    except Exception as e:
+        print(f"Error receiving control signal: {e}")
 
 
 def start_server():
-    """Start the server, accept client connections, and send metadata."""
+    """Start the server, accept client connections, and handle them."""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('0.0.0.0', 5000))
     server_socket.listen(5)
@@ -113,17 +129,18 @@ def start_server():
     while True:
         client_socket, addr = server_socket.accept()
         print(f"Connected to {addr}")
-        
+
         # Send metadata to the client
         send_metadata(client_socket)
 
-        # Receive control signal (e.g., play video command)
+        # Continuously receive control signals from the client
         receive_control_signal(client_socket)
-        
+
         # Close the client connection
         client_socket.close()
+        print(f"Connection with {addr} closed.")
 
 
 if __name__ == "__main__":
-    # generate_video_thumbnails()  # Uncomment to generate thumbnails if needed
+    generate_video_thumbnails()  # Ensure thumbnails are generated before starting the server
     start_server()
