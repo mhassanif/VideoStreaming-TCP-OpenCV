@@ -108,6 +108,8 @@ def receive_control_signal(client_socket):
                 print(f"Starting video: {video_title}")
             elif action == "pause":
                 print(f"Pausing video: {video_title}")
+            elif action == "unpause":
+                print(f"UnPausing video: {video_title}")
             elif action == "stop":
                 print("Stopping video playback.")
             else:
