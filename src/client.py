@@ -147,7 +147,7 @@ class VideoPlayerUI:
         pause_button = ttk.Button(self.video_window, text="Pause", command=self.pause_button_action)
         pause_button.grid(row=1, column=1, pady=10)
 
-        unpause_button = ttk.Button(self.video_window, text="Unpause", command=self.unpause_button_action)
+        unpause_button = ttk.Button(self.video_window, text="Resume", command=self.unpause_button_action)
         unpause_button.grid(row=1, column=2, pady=10)
 
         # Show the video window and hide the thumbnails window
@@ -169,9 +169,9 @@ class VideoPlayerUI:
             self.send_control_signal("pause", self.selected_video)
 
     def unpause_button_action(self):
-        """Action for the unpause button."""
+        """Action for the resume button."""
         if self.selected_video:
-            self.send_control_signal("unpause", self.selected_video)
+            self.send_control_signal("resume", self.selected_video)
 
 
 def connect_to_server():
