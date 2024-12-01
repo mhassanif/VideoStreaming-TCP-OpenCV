@@ -120,8 +120,10 @@ def receive_control_signal(client_socket, shared_state, state_condition):
                     state_condition.notify()  # Notify streaming thread
 
                 elif action == "stop":
+                    shared_state["video_name"] = None
                     shared_state["control_flags"]["stop"] = True
                     state_condition.notify()  # Notify streaming thread
+                    
         except Exception as e:
             print(f"Error in receiving control signal: {e}")
             break
@@ -139,6 +141,8 @@ def stream_video(client_socket, shared_state, state_condition):
                 # Wait until a video is requested
                 while not shared_state["video_name"]:
                     state_condition.wait()
+        
+                print("Recvied name :", shared_state["video_name"])
 
                 video_name = shared_state["video_name"]
                 video_path = os.path.join(VIDEO_DIR, video_name + '.mp4')
@@ -161,7 +165,17 @@ def stream_video(client_socket, shared_state, state_condition):
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
+                    print("video has ended!")
                     break  # End of video
+
+                print("streaming...")
+
+                # with state_condition:
+                #     if shared_state["control_flags"].get("stop", False):  # Check if the stop flag is set
+                #         print("Stop flag detected, switching video.")
+                #         shared_state["video_name"] = None  # Reset the video name to prevent re-entry
+                #         shared_state["control_flags"]["stop"] = False  # Reset the stop flag after handling
+                #         break  # Break the loop to switch to the new video
                 
                 # Encode the frame as JPEG
                 _, buffer = cv2.imencode('.jpg', frame)
@@ -175,14 +189,6 @@ def stream_video(client_socket, shared_state, state_condition):
                 # Simulate streaming at 30 FPS
                 time.sleep(1 / 30)
 
-                # Check if the streaming should stop
-                # with state_condition:
-                #     if shared_state["control_flags"]["stop"]:
-                #         shared_state["control_flags"]["stop"] = False  # Reset stop flag
-                #         shared_state["video_name"] = None  # Reset video name
-                #         cap.release()
-                #         print("Streaming stopped.")
-                #         break
     except Exception as e:
         print(f"Error during video streaming: {e}")
     finally:

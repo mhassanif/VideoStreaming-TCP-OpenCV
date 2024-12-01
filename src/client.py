@@ -70,7 +70,6 @@ class VideoPlayerUI:
 
     def thumbnail_screen(self):
         """Display a UI with thumbnails and titles of videos."""
-
         self.video_window.withdraw()
 
         # Clear the thumbnails window
@@ -214,8 +213,11 @@ class VideoPlayerUI:
                 # Decode the frame using OpenCV
                 frame = cv2.imdecode(np.frombuffer(frame_data, np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
-                    # Display the frame using OpenCV's GUI
-                    cv2.imshow("Video Player", frame)
+                    # Resize the frame to 400x600
+                    frame_resized = cv2.resize(frame, (600, 400))
+
+                    # Display the resized frame using OpenCV's GUI
+                    cv2.imshow("Video Player", frame_resized)
 
                     # Break the loop if the user closes the OpenCV window
                     if cv2.waitKey(1) & 0xFF == ord('q'):
