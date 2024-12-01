@@ -106,6 +106,7 @@ def receive_control_signal(client_socket, shared_state, state_condition):
             video_name = control_signal.get("video")  # Extract video name
 
             with state_condition:
+                print(action)
                 if action == "start" and video_name:
                     shared_state["video_name"] = video_name  # Assign the video name
                     shared_state["control_flags"]["stop"] = False
@@ -129,40 +130,65 @@ def receive_control_signal(client_socket, shared_state, state_condition):
 
 def stream_video(client_socket, shared_state, state_condition):
     """
-    Streams a hardcoded video frame-by-frame to the client through the provided socket.
+    Streams the video requested by the client, using the shared state.
+    Dynamically switches videos based on the requested video name.
     """
-    # Hardcoded path to the video
-    hardcoded_video_path = os.path.join(VIDEO_DIR, "spining_earth.mp4")  
-    
-    # Open the video file
-    cap = cv2.VideoCapture(hardcoded_video_path)
-    if not cap.isOpened():
-        print(f"Error: Unable to open video {hardcoded_video_path}")
-        return
     try:
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break  # Video ended
-            
-            print("streaming...")
-            # Encode the frame as JPEG
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame_data = buffer.tobytes()
-            
-            # Send the frame size followed by the frame data
-            frame_size = len(frame_data)
-            client_socket.sendall(frame_size.to_bytes(4, 'big'))  # Send frame size (4 bytes)
-            client_socket.sendall(frame_data)  # Send the actual frame
-            
-            # Simulate a delay for streaming (30 FPS)
-            time.sleep(1 / 30)
-    
+        while True:
+            with state_condition:
+                # Wait until a video is requested
+                while not shared_state["video_name"]:
+                    state_condition.wait()
+
+                video_name = shared_state["video_name"]
+                video_path = os.path.join(VIDEO_DIR, video_name + '.mp4')
+
+                # Check if the requested video exists
+                if not os.path.exists(video_path):
+                    print(f"Error: Video '{video_name}' not found.")
+                    continue
+
+                # Open the requested video
+                cap = cv2.VideoCapture(video_path)
+                if not cap.isOpened():
+                    print(f"Error: Unable to open video '{video_path}'")
+                    continue
+
+                print(f"Streaming video: {video_name}")
+                shared_state["cap"] = cap  # Store the video capture object
+
+            # Stream the video frames
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break  # End of video
+                
+                # Encode the frame as JPEG
+                _, buffer = cv2.imencode('.jpg', frame)
+                frame_data = buffer.tobytes()
+
+                # Send frame size followed by frame data
+                frame_size = len(frame_data)
+                client_socket.sendall(frame_size.to_bytes(4, 'big'))  # Frame size (4 bytes)
+                client_socket.sendall(frame_data)  # Frame data
+
+                # Simulate streaming at 30 FPS
+                time.sleep(1 / 30)
+
+                # Check if the streaming should stop
+                # with state_condition:
+                #     if shared_state["control_flags"]["stop"]:
+                #         shared_state["control_flags"]["stop"] = False  # Reset stop flag
+                #         shared_state["video_name"] = None  # Reset video name
+                #         cap.release()
+                #         print("Streaming stopped.")
+                #         break
     except Exception as e:
         print(f"Error during video streaming: {e}")
     finally:
-        cap.release()  # Release the video resource
-        print("Video streaming finished.")
+        if "cap" in shared_state and shared_state["cap"]:
+            shared_state["cap"].release()
+        print("Video streaming thread terminated.")
 
 
 

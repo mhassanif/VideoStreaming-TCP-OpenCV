@@ -63,8 +63,10 @@ class VideoPlayerUI:
     def play_button_action(self):
         """Action for the play button in the thumbnail screen."""
         if self.selected_video:
+            self.is_streaming = True 
             self.send_control_signal("start", self.selected_video)
             self.video_screen()  # Switch to the video playback screen
+
 
     def thumbnail_screen(self):
         """Display a UI with thumbnails and titles of videos."""
@@ -157,15 +159,24 @@ class VideoPlayerUI:
         self.video_window.deiconify()  # Show video window
         self.thumbnail_window.withdraw()  # Hide thumbnails window
 
+        # start streaming video
         self.is_streaming = True
         self.stream_thread = threading.Thread(target=self.receive_stream)
         self.stream_thread.start()
+
 
 
     def stop_button_action(self):
         """Action for the stop button."""
         if self.selected_video:
             self.send_control_signal("stop", self.selected_video)
+
+        if self.is_streaming:
+            self.is_streaming = False
+            if self.stream_thread and self.stream_thread.is_alive():
+                self.stream_thread.join()  # Wait for the thread to finish
+            print("Video streaming stopped")
+
             self.video_window.withdraw()  # Hide video window
             self.thumbnail_window.deiconify()  # Show thumbnails window
 
