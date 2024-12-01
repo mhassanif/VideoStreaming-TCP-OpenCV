@@ -129,60 +129,40 @@ def receive_control_signal(client_socket, shared_state, state_condition):
 
 def stream_video(client_socket, shared_state, state_condition):
     """
-    Streams video frames to the client based on the shared state.
-    Reacts to control signals for pausing, stopping, or switching videos.
-    Also plays the video locally on the server.
+    Streams a hardcoded video frame-by-frame to the client through the provided socket.
     """
-    while True:
-        with state_condition:
-            while not shared_state["video_name"] or shared_state["control_flags"]["stop"]:
-                # Wait until a video name is assigned or the stop signal is cleared
-                state_condition.wait()
-
-            # Construct the video path
-            video_name = shared_state["video_name"]
-            video_path = os.path.join(VIDEO_DIR, f"{video_name}.mp4")
-            # Open the video
-            cap = cv2.VideoCapture(video_path)
-            if not cap.isOpened():
-                print(f"Error: Unable to open video {video_path}")
-                shared_state["video_name"] = None
-                continue
-
-            shared_state["cap"] = cap  # Update cap in the shared state
-
-        # Stream and display frames
+    # Hardcoded path to the video
+    hardcoded_video_path = os.path.join(VIDEO_DIR, "spining_earth.mp4")  
+    
+    # Open the video file
+    cap = cv2.VideoCapture(hardcoded_video_path)
+    if not cap.isOpened():
+        print(f"Error: Unable to open video {hardcoded_video_path}")
+        return
+    try:
         while cap.isOpened():
-            with state_condition:
-                if shared_state["control_flags"]["stop"]:
-                    break  # Stop streaming
-
-                if shared_state["control_flags"]["pause"]:
-                    state_condition.wait()  # Wait until resume signal
-
             ret, frame = cap.read()
             if not ret:
                 break  # Video ended
-
-            # Display the video frame on the server
-            cv2.imshow("Server Video Playback", frame)
-
-            # Check for a quit key to stop the server-side playback
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                shared_state["control_flags"]["stop"] = True
-                break
-
-            # Simulate streaming delay (30 FPS)
+            
+            print("streaming...")
+            # Encode the frame as JPEG
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_data = buffer.tobytes()
+            
+            # Send the frame size followed by the frame data
+            frame_size = len(frame_data)
+            client_socket.sendall(frame_size.to_bytes(4, 'big'))  # Send frame size (4 bytes)
+            client_socket.sendall(frame_data)  # Send the actual frame
+            
+            # Simulate a delay for streaming (30 FPS)
             time.sleep(1 / 30)
-
-        with state_condition:
-            # Clean up after video ends or is stopped
-            cap.release()
-            shared_state["cap"] = None
-            shared_state["video_name"] = None
-
-        # Close the video display window when video ends
-        cv2.destroyAllWindows()
+    
+    except Exception as e:
+        print(f"Error during video streaming: {e}")
+    finally:
+        cap.release()  # Release the video resource
+        print("Video streaming finished.")
 
 
 

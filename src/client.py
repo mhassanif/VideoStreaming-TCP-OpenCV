@@ -3,6 +3,9 @@ import json
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk  # For image handling
+import cv2
+import numpy as np
+import threading
 
 selected_video = None  # Variable to keep track of the selected video
 selected_title_label = None  # Variable to keep track of the selected title label
@@ -154,6 +157,11 @@ class VideoPlayerUI:
         self.video_window.deiconify()  # Show video window
         self.thumbnail_window.withdraw()  # Hide thumbnails window
 
+        self.is_streaming = True
+        self.stream_thread = threading.Thread(target=self.receive_stream)
+        self.stream_thread.start()
+
+
     def stop_button_action(self):
         """Action for the stop button."""
         if self.selected_video:
@@ -172,6 +180,37 @@ class VideoPlayerUI:
         """Action for the resume button."""
         if self.selected_video:
             self.send_control_signal("resume", self.selected_video)
+    
+    def receive_stream(self):
+        """Receive and display the video stream."""
+        try:
+            while self.is_streaming:
+                # Receive a frame length (4 bytes for size)
+                frame_length_bytes = self.client_socket.recv(4)
+                if not frame_length_bytes:
+                    break  # Stop if no data is received
+
+                frame_length = int.from_bytes(frame_length_bytes, byteorder='big')
+
+                # Receive the actual frame
+                frame_data = b""
+                while len(frame_data) < frame_length:
+                    packet = self.client_socket.recv(frame_length - len(frame_data))
+                    if not packet:
+                        break
+                    frame_data += packet
+
+                # Decode the frame using OpenCV
+                frame = cv2.imdecode(np.frombuffer(frame_data, np.uint8), cv2.IMREAD_COLOR)
+                if frame is not None:
+                    # Display the frame using OpenCV's GUI
+                    cv2.imshow("Video Player", frame)
+
+                    # Break the loop if the user closes the OpenCV window
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+        finally:
+            cv2.destroyAllWindows()
 
 
 def connect_to_server():
