@@ -96,34 +96,25 @@ def receive_control_signal(client_socket, shared_state, state_condition):
     """
     while True:
         try:
-            # Receive control signal (example: {"action": "start", "video": "video_name"})
             data = client_socket.recv(1024).decode()
             if not data:
                 break
 
-            control_signal = eval(data)  # Assume JSON-like control signal
+            control_signal = eval(data)  
             action = control_signal.get("action")
-            video_name = control_signal.get("video")  # Extract video name
+            video_name = control_signal.get("video")  
 
             with state_condition:
-                print(action)
                 if action == "start" and video_name:
-                    shared_state["video_name"] = video_name  # Assign the video name
+                    shared_state["video_name"] = video_name
                     shared_state["control_flags"]["stop"] = False
-                    state_condition.notify()  # Notify streaming thread
-
-                elif action == "pause":
-                    shared_state["control_flags"]["pause"] = True
-
-                elif action == "resume":
-                    shared_state["control_flags"]["pause"] = False
-                    state_condition.notify()  # Notify streaming thread
+                    state_condition.notify()
 
                 elif action == "stop":
-                    shared_state["video_name"] = None
                     shared_state["control_flags"]["stop"] = True
-                    state_condition.notify()  # Notify streaming thread
-                    
+                    shared_state["video_name"] = None
+                    state_condition.notify()
+
         except Exception as e:
             print(f"Error in receiving control signal: {e}")
             break
@@ -138,63 +129,61 @@ def stream_video(client_socket, shared_state, state_condition):
     try:
         while True:
             with state_condition:
-                # Wait until a video is requested
-                while not shared_state["video_name"]:
+                # Wait for a video to be assigned or the stop flag to reset
+                while shared_state["video_name"] is None or shared_state["control_flags"]["stop"]:
                     state_condition.wait()
-        
-                print("Recvied name :", shared_state["video_name"])
-
+                
+                # Retrieve the video name
                 video_name = shared_state["video_name"]
                 video_path = os.path.join(VIDEO_DIR, video_name + '.mp4')
 
                 # Check if the requested video exists
                 if not os.path.exists(video_path):
                     print(f"Error: Video '{video_name}' not found.")
+                    shared_state["video_name"] = None
                     continue
 
-                # Open the requested video
+                # Open the video file
                 cap = cv2.VideoCapture(video_path)
                 if not cap.isOpened():
                     print(f"Error: Unable to open video '{video_path}'")
+                    shared_state["video_name"] = None
                     continue
 
                 print(f"Streaming video: {video_name}")
-                shared_state["cap"] = cap  # Store the video capture object
 
-            # Stream the video frames
+            # Stream video frames
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
-                    print("video has ended!")
-                    break  # End of video
+                    print("End of video reached.")
+                    break
 
-                print("streaming...")
+                with state_condition:
+                    # Check for stop signal
+                    if shared_state["control_flags"]["stop"]:
+                        print("Stop signal received. Ending current stream.")
+                        break
 
-                # with state_condition:
-                #     if shared_state["control_flags"].get("stop", False):  # Check if the stop flag is set
-                #         print("Stop flag detected, switching video.")
-                #         shared_state["video_name"] = None  # Reset the video name to prevent re-entry
-                #         shared_state["control_flags"]["stop"] = False  # Reset the stop flag after handling
-                #         break  # Break the loop to switch to the new video
-                
-                # Encode the frame as JPEG
+                # Encode frame as JPEG
                 _, buffer = cv2.imencode('.jpg', frame)
                 frame_data = buffer.tobytes()
 
-                # Send frame size followed by frame data
+                # Send frame size and data
                 frame_size = len(frame_data)
                 client_socket.sendall(frame_size.to_bytes(4, 'big'))  # Frame size (4 bytes)
                 client_socket.sendall(frame_data)  # Frame data
 
-                # Simulate streaming at 30 FPS
+                # Simulate 30 FPS streaming
                 time.sleep(1 / 30)
+
+            cap.release()  # Release the video file when done
 
     except Exception as e:
         print(f"Error during video streaming: {e}")
     finally:
-        if "cap" in shared_state and shared_state["cap"]:
-            shared_state["cap"].release()
         print("Video streaming thread terminated.")
+
 
 
 
@@ -210,10 +199,9 @@ def handle_client(client_socket):
     # Shared state for the client
     shared_state = {
         "video_name": None,  # Currently requested video name
-        "cap": None,         # cv2.VideoCapture object
         "control_flags": {
             "pause": False,  # Pause/resume video
-            "stop": False    # Stop video streaming
+            "stop": True     # Stop video streaming
         }
     }
     
@@ -229,8 +217,12 @@ def handle_client(client_socket):
     control_thread.start()
 
     # Wait for threads to finish
+    control_thread.join()  # Control thread should end when client disconnects
+    shared_state["control_flags"]["stop"] = True  # Ensure streaming thread exits
+    with state_condition:
+        state_condition.notify_all()  # Wake the streaming thread if waiting
     stream_thread.join()
-    control_thread.join()
+
     print("Client connection closed.")
 
 
