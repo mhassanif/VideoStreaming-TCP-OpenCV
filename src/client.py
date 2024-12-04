@@ -140,9 +140,9 @@ class VideoPlayerUI:
         for widget in self.video_window.winfo_children():
             widget.destroy()
 
-        # Add video placeholder or actual video player (this could be expanded later)
-        video_placeholder = ttk.Label(self.video_window, text="Video Placeholder")
-        video_placeholder.grid(row=0, column=0, padx=10, pady=10)
+        # # Add video placeholder or actual video player (this could be expanded later)
+        # video_placeholder = ttk.Label(self.video_window, text="Video Placeholder")
+        # video_placeholder.grid(row=0, column=0, padx=10, pady=10)
 
         # Add video control buttons
         stop_button = ttk.Button(self.video_window, text="Stop", command=self.stop_button_action)
@@ -214,7 +214,7 @@ class VideoPlayerUI:
                 frame = cv2.imdecode(np.frombuffer(frame_data, np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
                     # Resize the frame to 400x600
-                    frame_resized = cv2.resize(frame, (600, 400))
+                    frame_resized = cv2.resize(frame, (500, 300))
 
                     # Display the resized frame using OpenCV's GUI
                     cv2.imshow("Video Player", frame_resized)

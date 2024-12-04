@@ -102,8 +102,9 @@ def receive_control_signal(client_socket, shared_state, state_condition):
 
             control_signal = eval(data)  
             action = control_signal.get("action")
-            video_name = control_signal.get("video")  
+            video_name = control_signal.get("video")
 
+            print(control_signal)
             with state_condition:
                 if action == "start" and video_name:
                     shared_state["video_name"] = video_name
@@ -113,6 +114,14 @@ def receive_control_signal(client_socket, shared_state, state_condition):
                 elif action == "stop":
                     shared_state["control_flags"]["stop"] = True
                     shared_state["video_name"] = None
+                    state_condition.notify()
+
+                elif action == "pause":
+                    shared_state["control_flags"]["pause"] = True
+                    state_condition.notify()
+
+                elif action == "resume":
+                    shared_state["control_flags"]["pause"] = False
                     state_condition.notify()
 
         except Exception as e:
@@ -132,7 +141,7 @@ def stream_video(client_socket, shared_state, state_condition):
                 # Wait for a video to be assigned or the stop flag to reset
                 while shared_state["video_name"] is None or shared_state["control_flags"]["stop"]:
                     state_condition.wait()
-                
+
                 # Retrieve the video name
                 video_name = shared_state["video_name"]
                 video_path = os.path.join(VIDEO_DIR, video_name + '.mp4')
@@ -165,6 +174,11 @@ def stream_video(client_socket, shared_state, state_condition):
                         print("Stop signal received. Ending current stream.")
                         break
 
+                    # Handle pause signal
+                    while shared_state["control_flags"]["pause"]:
+                        print("Streaming paused. Waiting for resume signal...")
+                        state_condition.wait()
+
                 # Encode frame as JPEG
                 _, buffer = cv2.imencode('.jpg', frame)
                 frame_data = buffer.tobytes()
@@ -183,10 +197,6 @@ def stream_video(client_socket, shared_state, state_condition):
         print(f"Error during video streaming: {e}")
     finally:
         print("Video streaming thread terminated.")
-
-
-
-
 
 
 def handle_client(client_socket):
