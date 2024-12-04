@@ -11,47 +11,15 @@ THUMBNAIL_DIR = os.path.join(os.path.dirname(__file__), "../thumbnails")
 METADATA_FILE = os.path.join(VIDEO_DIR, "metadata.json")
 
 
-# Helper function
-def create_thumbnail(video_path, thumbnail_path):
-    """Generate a thumbnail for the given video."""
-    cap = cv2.VideoCapture(video_path)
-    ret, frame = cap.read()  # Read the first frame
-    if ret:
-        cv2.imwrite(thumbnail_path, frame)  # Save as thumbnail
-        print(f"Thumbnail created: {thumbnail_path}")
-    else:
-        print(f"Failed to create thumbnail for: {video_path}")
-    cap.release()
-
-
-def generate_video_thumbnails():
-    """Ensure that thumbnails are generated for all videos in the video directory."""
-    if not os.path.exists(THUMBNAIL_DIR):
-        os.makedirs(THUMBNAIL_DIR)  # Create the thumbnails directory if it doesn't exist
-
-    videos = [f for f in os.listdir(VIDEO_DIR) if f.endswith(('.mp4', '.avi', '.mkv'))]
-    print(f"Found videos: {videos}")
-
-    for video in videos:
-        video_path = os.path.join(VIDEO_DIR, video)
-        thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{os.path.splitext(video)[0]}.jpg")
-
-        # Generate thumbnail only if it doesn't exist
-        if not os.path.exists(thumbnail_path):
-            create_thumbnail(video_path, thumbnail_path)
-        else:
-            print(f"Thumbnail already exists: {thumbnail_path}")
-
-
 def generate_metadata():
     """Generate video metadata (title and thumbnail paths) and store it in a JSON file."""
     # List all videos in the directory
     videos = [f for f in os.listdir(VIDEO_DIR) if f.endswith(('.mp4', '.avi', '.mkv'))]
     metadata = []
 
-    # Prepare metadata for each video
+    # check all video files in directory 
     for video in videos:
-        video_name = os.path.splitext(video)[0]
+        video_name = os.path.splitext(video)[0] # take the first frame for thumbnail
         thumbnail_path = os.path.join(THUMBNAIL_DIR, f"{video_name}.jpg")
 
         # Verify if thumbnail exists
@@ -84,7 +52,7 @@ def send_metadata(client_socket):
     # Get the metadata (either from the JSON or generated)
     metadata = read_metadata()
     
-    # Convert metadata to JSON string
+    # Convert metadata to JSON string  and send 
     metadata_json = json.dumps(metadata)
     client_socket.sendall(metadata_json.encode('utf-8'))  # Send JSON over TCP
     print("Metadata sent to client!")
@@ -127,8 +95,6 @@ def receive_control_signal(client_socket, shared_state, state_condition):
         except Exception as e:
             print(f"Error in receiving control signal: {e}")
             break
-
-
 
 def stream_video(client_socket, shared_state, state_condition):
     """
@@ -198,7 +164,6 @@ def stream_video(client_socket, shared_state, state_condition):
     finally:
         print("Video streaming thread terminated.")
 
-
 def handle_client(client_socket):
     """
     Handles the connection with a single client.
@@ -235,8 +200,6 @@ def handle_client(client_socket):
 
     print("Client connection closed.")
 
-
-
 def start_server():
     """Start the server, accept client connections, and handle them."""
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -255,14 +218,10 @@ def start_server():
         client_handler = threading.Thread(target=handle_client, args=(client_socket,))
         client_handler.start()
 
-        # Continuously receive control signals from the client
-        # receive_control_signal(client_socket)
-
-        # Close the client connection
-        # client_socket.close()
-        # print(f"Connection with {addr} closed.")
+    # Close the client connection
+    client_socket.close()
+    print(f"Connection with {addr} closed.")
 
 
 if __name__ == "__main__":
-    generate_video_thumbnails()  # Ensure thumbnails are generated before starting the server
     start_server()

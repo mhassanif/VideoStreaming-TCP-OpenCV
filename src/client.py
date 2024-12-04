@@ -7,9 +7,6 @@ import cv2
 import numpy as np
 import threading
 
-selected_video = None  # Variable to keep track of the selected video
-selected_title_label = None  # Variable to keep track of the selected title label
-
 
 class VideoPlayerUI:
     def __init__(self, window, client_socket):
@@ -17,6 +14,7 @@ class VideoPlayerUI:
         self.client_socket = client_socket
         self.selected_video = None
         self.selected_title_label = None
+        self.is_paused = False
 
         # Create the thumbnails window and video player window
         self.thumbnail_window = tk.Toplevel(self.window)
@@ -25,11 +23,9 @@ class VideoPlayerUI:
 
         self.video_window = tk.Toplevel(self.window)
         self.video_window.title("Video Player")
-        self.video_window.geometry("600x400")
-        
-        # Start with the video window hidden
+        self.video_window.geometry("300x100")
 
-        # Start by displaying the thumbnails screen
+        # Start with the video window hidden
         self.thumbnail_screen()
 
     def receive_metadata(self):
@@ -51,7 +47,7 @@ class VideoPlayerUI:
         print(f"Selected video: {self.selected_video}")
 
     def send_control_signal(self, action, video_title):
-        """Send control signal to the server (start, stop, pause, unpause)."""
+        """Send control signal to the server (start, stop, pause, resume)."""
         control_signal = {
             "action": action,
             "video": video_title  # Always include the video title
@@ -63,10 +59,9 @@ class VideoPlayerUI:
     def play_button_action(self):
         """Action for the play button in the thumbnail screen."""
         if self.selected_video:
-            self.is_streaming = True 
+            self.is_streaming = True
             self.send_control_signal("start", self.selected_video)
             self.video_screen()  # Switch to the video playback screen
-
 
     def thumbnail_screen(self):
         """Display a UI with thumbnails and titles of videos."""
@@ -131,7 +126,6 @@ class VideoPlayerUI:
         # Add a fixed height for the bottom panel (Play button row)
         self.thumbnail_window.grid_rowconfigure(1, minsize=40)  # Adjust height as needed
 
-
     def video_screen(self):
         """Display a UI for video playback controls."""
         self.thumbnail_window.withdraw()
@@ -140,30 +134,21 @@ class VideoPlayerUI:
         for widget in self.video_window.winfo_children():
             widget.destroy()
 
-        # # Add video placeholder or actual video player (this could be expanded later)
-        # video_placeholder = ttk.Label(self.video_window, text="Video Placeholder")
-        # video_placeholder.grid(row=0, column=0, padx=10, pady=10)
-
         # Add video control buttons
         stop_button = ttk.Button(self.video_window, text="Stop", command=self.stop_button_action)
         stop_button.grid(row=1, column=0, pady=10)
 
-        pause_button = ttk.Button(self.video_window, text="Pause", command=self.pause_button_action)
-        pause_button.grid(row=1, column=1, pady=10)
-
-        unpause_button = ttk.Button(self.video_window, text="Resume", command=self.unpause_button_action)
-        unpause_button.grid(row=1, column=2, pady=10)
+        self.pause_button = ttk.Button(self.video_window, text="Pause", command=self.pause_button_action)
+        self.pause_button.grid(row=1, column=1, pady=10)
 
         # Show the video window and hide the thumbnails window
         self.video_window.deiconify()  # Show video window
         self.thumbnail_window.withdraw()  # Hide thumbnails window
 
-        # start streaming video
+        # Start streaming video
         self.is_streaming = True
         self.stream_thread = threading.Thread(target=self.receive_stream)
         self.stream_thread.start()
-
-
 
     def stop_button_action(self):
         """Action for the stop button."""
@@ -179,47 +164,36 @@ class VideoPlayerUI:
             self.video_window.withdraw()  # Hide video window
             self.thumbnail_window.deiconify()  # Show thumbnails window
 
-
-
     def pause_button_action(self):
         """Action for the pause button."""
         if self.selected_video:
-            self.send_control_signal("pause", self.selected_video)
+            if self.is_paused:
+                self.send_control_signal("resume", self.selected_video)
+                self.pause_button.config(text="Pause")
+                self.is_paused = False
+            else:
+                self.send_control_signal("pause", self.selected_video)
+                self.pause_button.config(text="Resume")
+                self.is_paused = True
 
-    def unpause_button_action(self):
-        """Action for the resume button."""
-        if self.selected_video:
-            self.send_control_signal("resume", self.selected_video)
-    
     def receive_stream(self):
         """Receive and display the video stream."""
         try:
             while self.is_streaming:
-                # Receive a frame length (4 bytes for size)
                 frame_length_bytes = self.client_socket.recv(4)
                 if not frame_length_bytes:
-                    break  # Stop if no data is received
-
+                    break
                 frame_length = int.from_bytes(frame_length_bytes, byteorder='big')
-
-                # Receive the actual frame
                 frame_data = b""
                 while len(frame_data) < frame_length:
                     packet = self.client_socket.recv(frame_length - len(frame_data))
                     if not packet:
                         break
                     frame_data += packet
-
-                # Decode the frame using OpenCV
                 frame = cv2.imdecode(np.frombuffer(frame_data, np.uint8), cv2.IMREAD_COLOR)
                 if frame is not None:
-                    # Resize the frame to 400x600
                     frame_resized = cv2.resize(frame, (500, 300))
-
-                    # Display the resized frame using OpenCV's GUI
                     cv2.imshow("Video Player", frame_resized)
-
-                    # Break the loop if the user closes the OpenCV window
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
         finally:
@@ -228,17 +202,13 @@ class VideoPlayerUI:
 
 def connect_to_server():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('127.0.0.1', 5000))  # Connect to the server
-
+    client_socket.connect(('127.0.0.1', 5000))
     return client_socket
 
 
 if __name__ == "__main__":
     window = tk.Tk()
-    window.withdraw()  # Hide the main window since we're using Toplevel windows
-
+    window.withdraw()
     client_socket = connect_to_server()
-
     app = VideoPlayerUI(window, client_socket)
-
     window.mainloop()
