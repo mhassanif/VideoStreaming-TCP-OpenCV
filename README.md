@@ -3,5 +3,5 @@ Real-Time Video Streaming using Socket Programming
 
 ## Description:
 
-Python-based multimedia streaming system where the server streams video content to multiple clients using UDP for real-time transmission. The client application will feature a GUI displaying thumbnails of available videos, allowing users to select and play videos in real-time. The server will log client connections and requests using socket programming. I plan to use OpenCV for video handling and a library like Tkinter for the interface depending on the requirements.
+This project involves creating a Python-based real-time video streaming system using TCP. The server streams video content to multiple clients, while each client features a GUI displaying video thumbnails. Users can select and play videos in real-time, with the server handling client connections and requests via socket programming. The server uses OpenCV for video handling, and client-side interactions are managed with a Tkinter-based interface. The system provides reliable, ordered video delivery and supports simultaneous connections, ensuring smooth streaming.
 
