@@ -28,12 +28,12 @@ class VideoPlayerUI:
         # Create the thumbnails and video player windows
         self.thumbnail_window = tk.Toplevel(self.window)
         self.thumbnail_window.title("Thumbnails Screen")
-        self.thumbnail_window.geometry("600x400")
+        self.thumbnail_window.geometry("700x500")
         self.thumbnail_window.configure(bg=self.bg_color)
 
         self.video_window = tk.Toplevel(self.window)
         self.video_window.title("Video Player")
-        self.video_window.geometry("600x400")
+        self.video_window.geometry("700x500")
         self.video_window.configure(bg=self.bg_color)
 
         self.create_top_panel(self.thumbnail_window, "Video Player App")
@@ -196,6 +196,10 @@ class VideoPlayerUI:
         """Stop video playback and return to the thumbnail screen."""
         print("Stopping video playback...")
 
+        # Send a stop signal to the server for the current video
+        if self.selected_video:
+            self.send_control_signal("stop", self.selected_video)
+            
         # Signal the streaming thread to stop
         self.is_streaming = False
 
@@ -207,9 +211,6 @@ class VideoPlayerUI:
         if hasattr(self, "video_canvas"):
             self.video_canvas.delete("all")
 
-        # Send a stop signal to the server for the current video
-        if self.selected_video:
-            self.send_control_signal("stop", self.selected_video)
 
         # Show the thumbnail screen and hide the video window
         self.video_window.withdraw()
