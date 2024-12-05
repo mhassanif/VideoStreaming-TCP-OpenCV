@@ -138,6 +138,7 @@ def stream_video(client_socket, shared_state, state_condition):
                     # Check for stop signal
                     if shared_state["control_flags"]["stop"]:
                         print("Stop signal received. Ending current stream.")
+                        state_condition.wait()
                         break
 
                     # Handle pause signal
