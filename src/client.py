@@ -199,7 +199,7 @@ class VideoPlayerUI:
         # Send a stop signal to the server for the current video
         if self.selected_video:
             self.send_control_signal("stop", self.selected_video)
-            
+
         # Signal the streaming thread to stop
         self.is_streaming = False
 
@@ -323,6 +323,9 @@ if __name__ == "__main__":
     window.title("Video Streaming App")
     window.geometry("600x400")
     window.configure(bg="#f0f0f5")
+
+    window.withdraw()
+
 
     # Connect to the server
     try:
