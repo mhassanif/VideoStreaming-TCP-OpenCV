@@ -136,37 +136,11 @@ The server logs control signals received from the client.
 
   - The client GUI is designed for user-friendliness with clear navigation and interactive features.
 
-## Example
-
-1. Start the server:
-   ```bash
-   python server.py
-   ```
-2. Start the client:
-   ```bash
-   python client.py
-   ```
-3. Interact with the client GUI:
-   - Browse video thumbnails.
-   - Select and play a video.
-   - Use playback controls to pause, stop, or resume the video.
-
 ## Notes
 
 - Ensure all video files are in formats supported by OpenCV (e.g., `.mp4`, `.avi`, `.mkv`).
 - Thumbnails are generated only for videos present in the `videos` directory.
 
-## Future Enhancements
-
-- Add support for multiple clients to stream simultaneously.
-- Implement adaptive bitrate streaming for better performance.
-- Integrate logging for server and client activities.
-
 ## Contributing
 
 Contributions are welcome! Please fork the repository and create a pull request for any enhancements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
