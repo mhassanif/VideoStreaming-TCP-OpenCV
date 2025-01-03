@@ -109,12 +109,12 @@ python client.py
 ### Video Selection Window
 The thumbnail screen where users can browse and select videos.
 
-![Video Selection Window](screenshots/video_screen.png)
+![Video Selection Window](screenshots/home_page.png)
 
 ### Video Player Window
 The playback screen with controls for play, pause, stop, and resume.
 
-![Video Player Window](screenshots/home_page.png)
+![Video Player Window](screenshots/video_screen.png)
 
 ### Server Terminal Logs
 The server logs control signals received from the client.
